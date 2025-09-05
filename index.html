@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INCOIS Ocean Hazard Reporting Platform</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-water" aria-hidden="true"></i>
+                <div>
+                    <h1>Aqua Sentinel</h1>
+                    <small>Real-time Coastal Monitoring & Reporting</small>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="language-selector">
+                    <select id="languageSelect" aria-label="Select language">
+                        <option value="en">English</option>
+                        <option value="hi">हिंदी</option>
+                        <option value="ta">தமிழ்</option>
+                        <option value="te">తెలుగు</option>
+                        <option value="bn">বাংলা</option>
+                    </select>
+                </div>
+                <button onclick="showNotifications()" aria-label="Show notifications" style="background:none;border:none;color:var(--dark);font-size:1.2rem;cursor:pointer;position:relative;">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+                <div>
+                    <strong id="userName">Guest User</strong>
+                    <br>
+                    <small id="userRole">Citizen</small>
+                </div>
+                <button onclick="toggleLogin()" aria-label="Login" style="background:rgba(255,255,255,0.2);border:none;padding:0.5rem 1rem;border-radius:6px;color:var(--dark);cursor:pointer;">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('dashboard')" aria-label="Dashboard">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </button>
+        <button class="nav-tab" onclick="switchTab('map')" aria-label="Live Map">
+            <i class="fas fa-map-marked-alt"></i> Live Map
+        </button>
+        <button class="nav-tab" onclick="switchTab('report')" aria-label="Report Hazard">
+            <i class="fas fa-plus-circle"></i> Report Hazard
+        </button>
+        <button class="nav-tab" onclick="switchTab('social')" aria-label="Social Media">
+            <i class="fas fa-hashtag"></i> Social Media
+        </button>
+        <button class="nav-tab" onclick="switchTab('reports')" aria-label="All Reports">
+            <i class="fas fa-clipboard-list"></i> All Reports
+        </button>
+        <button class="nav-tab" onclick="switchTab('analytics')" aria-label="Analytics">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </button>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner" style="display:none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>TSUNAMI WARNING</strong> - High waves expected along eastern coast. Move to higher ground immediately.
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section">
+            <!-- Statistics Grid -->
+            <div class="stats-grid">
+                <div class="stat-card danger">
+                    <div class="stat-label">Active Alerts</div>
+                    <div class="stat-value" id="activeAlerts">3</div>
+                    <small>2 Critical, 1 Warning</small>
+                    <i class="fas fa-exclamation-triangle stat-icon"></i>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Reports Today</div>
+                    <div class="stat-value" id="reportsToday">47</div>
+                    <small>+23% from yesterday</small>
+                    <i class="fas fa-file-alt stat-icon"></i>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-label">Active Users</div>
+                    <div class="stat-value" id="activeUsers">892</div>
+                    <small>Currently online</small>
+                    <i class="fas fa-users stat-icon"></i>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Social Mentions</div>
+                    <div class="stat-value" id="socialMentions">1.2K</div>
+                    <small>Last 24 hours</small>
+                    <i class="fas fa-share-alt stat-icon"></i>
+                </div>
+            </div>
+
+            <!-- Map Container -->
+            <div class="map-container">
+                <div class="map-header">
+                    <h2><i class="fas fa-map"></i> Real-time Hazard Map</h2>
+                    <div class="filter-controls">
+                        <button class="filter-btn active" onclick="filterMap('all')">All</button>
+                        <button class="filter-btn" onclick="filterMap('tsunami')">Tsunami</button>
+                        <button class="filter-btn" onclick="filterMap('storm')">Storm Surge</button>
+                        <button class="filter-btn" onclick="filterMap('waves')">High Waves</button>
+                        <button class="filter-btn" onclick="filterMap('flooding')">Flooding</button>
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+
+            <!-- Recent Activity Feed -->
+            <div class="social-feed">
+                <h2 style="margin-bottom:1rem;"><i class="fas fa-stream"></i> Recent Activity</h2>
+                <div id="activityFeed"></div>
+            </div>
+        </div>
+
+        <!-- Report Section -->
+        <div id="report-section" class="section" style="display:none;">
+            <div class="report-section">
+                <h2 style="margin-bottom:1.5rem;"><i class="fas fa-plus-circle"></i> Submit Ocean Hazard Report</h2>
+                <form id="reportForm" class="form-grid" onsubmit="handleReportSubmit(event)">
+                    <div class="form-group">
+                        <label for="hazardType">Hazard Type *</label>
+                        <select id="hazardType" required>
+                            <option value="">Select hazard type...</option>
+                            <option value="tsunami">Tsunami</option>
+                            <option value="storm_surge">Storm Surge</option>
+                            <option value="high_waves">High Waves</option>
+                            <option value="swell_surge">Swell Surge</option>
+                            <option value="coastal_flooding">Coastal Flooding</option>
+                            <option value="unusual_tide">Unusual Tide</option>
+                            <option value="coastal_erosion">Coastal Erosion</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="severity">Severity Level *</label>
+                        <select id="severity" required>
+                            <option value="">Select severity...</option>
+                            <option value="low">Low - Minor impact</option>
+                            <option value="medium">Medium - Moderate impact</option>
+                            <option value="high">High - Significant impact</option>
+                            <option value="critical">Critical - Life threatening</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location *</label>
+                        <input type="text" id="location" placeholder="Enter location or use GPS" required>
+                        <small style="margin-top:0.5rem;">
+                            <button type="button" onclick="getLocation()" style="background:var(--secondary);color:white;border:none;padding:0.25rem 0.75rem;border-radius:4px;cursor:pointer;">
+                                <i class="fas fa-location-arrow"></i> Use Current Location
+                            </button>
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="datetime">Date & Time *</label>
+                        <input type="datetime-local" id="datetime" required>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="description">Description *</label>
+                        <textarea id="description" rows="4" placeholder="Describe what you observed..." required></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Upload Media (Photos/Videos)</label>
+                        <div class="file-upload">
+                            <input type="file" id="media" accept="image/*,video/*" multiple onchange="handleFileSelect(event)">
+                            <label for="media" class="file-upload-label">
+                                <i class="fas fa-cloud-upload-alt" style="font-size:2rem;"></i>
+                                <span>Click to upload or drag files here</span>
+                            </label>
+                        </div>
+                        <div id="filePreview" style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactName">Your Name</label>
+                        <input type="text" id="contactName" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label for="contactPhone">Contact Number</label>
+                        <input type="tel" id="contactPhone" placeholder="Optional - for verification">
+                    </div>
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-paper-plane"></i> Submit Report
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Social Media Section -->
+        <div id="social-section" class="section" style="display:none;">
+            <div class="social-feed">
+                <h2 style="margin-bottom:1rem;"><i class="fas fa-hashtag"></i> Social Media Monitoring</h2>
+                <div style="margin-bottom:1rem;">
+                    <input type="text" placeholder="Search keywords..." style="width:100%;padding:0.75rem;border:2px solid var(--light);border-radius:6px;" aria-label="Search social media">
+                </div>
+                <div id="socialFeed"></div>
+            </div>
+        </div>
+
+        <!-- Reports Table Section -->
+        <div id="reports-section" class="section" style="display:none;">
+            <div class="reports-table">
+                <h2 style="margin-bottom:1rem;"><i class="fas fa-clipboard-list"></i> All Reports</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date/Time</th>
+                            <th>Location</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics-section" class="section" style="display:none;">
+            <div class="analytics-container">
+                <h2 style="margin-bottom:1rem;"><i class="fas fa-chart-bar"></i> Analytics</h2>
+                <canvas id="analyticsChart" style="max-height:400px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>User Login</h2>
+                <button class="modal-close" onclick="closeModal('loginModal')" aria-label="Close modal">&times;</button>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="userType">User Type</label>
+                    <select id="userType" required>
+                        <option value="citizen">Citizen</option>
+                        <option value="volunteer">Volunteer</option>
+                        <option value="official">Government Official</option>
+                        <option value="analyst">Data Analyst</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="submit-btn" style="width:100%;margin-top:1rem;">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
